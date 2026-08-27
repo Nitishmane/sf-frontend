@@ -39,9 +39,17 @@ export default function PhotoField({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [localError, setLocalError] = useState<string | null>(null);
 
+  const [busy, setBusy] = useState(false);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const dragFrom = useRef<{ x: number; y: number } | null>(null);
+
+  // Decoding a file is async, so a slow earlier pick can land after a faster
+  // later one — or after Remove, resurrecting a photo the user just deleted.
+  // Every load claims a generation; a callback that no longer owns the current
+  // one has been superseded and must not touch state.
+  const generation = useRef(0);
 
   const inputId = `field-${name}`;
   const errorId = `${inputId}-error`;
@@ -99,28 +107,54 @@ export default function PhotoField({
     }
 
     setLocalError(null);
+
+    const mine = ++generation.current;
+    const current = () => generation.current === mine;
+
+    // Drop the old photo the moment a new one is picked, so the preview and
+    // the hidden input agree at every instant. Submitting mid-decode then
+    // saves nothing — matching the empty preview on screen — rather than
+    // silently saving the *previous* photo while showing neither.
+    const previous = value;
+    setImage(null);
+    setValue("");
+    setBusy(true);
+
+    const fail = (message: string) => {
+      if (!current()) return;
+      setLocalError(message);
+      setValue(previous); // put back what we cleared
+      setBusy(false);
+    };
+
     const reader = new FileReader();
-    reader.onerror = () => setLocalError("That file could not be read.");
+    reader.onerror = () => fail("That file could not be read.");
     reader.onload = () => {
+      if (!current()) return;
       const loaded = new window.Image();
       loaded.onload = () => {
+        if (!current()) return;
         setImage(loaded);
         setZoom(1);
         setOffset({ x: 0, y: 0 });
+        setBusy(false);
       };
-      loaded.onerror = () =>
-        setLocalError("That file is not an image we can read.");
+      loaded.onerror = () => fail("That file is not an image we can read.");
       loaded.src = String(reader.result);
     };
     reader.readAsDataURL(file);
   }
 
   function handleRemove() {
+    // Claim a fresh generation so any decode still in flight is orphaned and
+    // cannot restore the photo after this.
+    generation.current += 1;
     setImage(null);
     setValue("");
     setZoom(1);
     setOffset({ x: 0, y: 0 });
     setLocalError(null);
+    setBusy(false);
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -186,7 +220,9 @@ export default function PhotoField({
           ) : (
             <span
               aria-hidden="true"
-              className="flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground"
+              className={`flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground ${
+                busy ? "animate-pulse" : ""
+              }`}
             >
               <ImagePlus className="h-6 w-6" strokeWidth={1.5} />
             </span>
@@ -199,7 +235,7 @@ export default function PhotoField({
               htmlFor={inputId}
               className="mb-1 block text-[13px] text-muted-foreground"
             >
-              PNG, JPEG, or WebP, up to 5 MB.
+              {busy ? "Preparing photo…" : "PNG, JPEG, or WebP, up to 5 MB."}
             </label>
             <input
               ref={fileRef}
