@@ -20,6 +20,17 @@ function optionalText(max: number, label: string) {
     .default(null);
 }
 
+/** Mirrors `MAX_PHOTO_BYTES` and the data-URL rule in the API's `app/schemas.py`. */
+export const MAX_PHOTO_BYTES = 1_500_000;
+const PHOTO_DATA_URL = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+/** Decoded byte count of a base64 payload, without allocating the bytes. */
+function decodedBytes(dataUrl: string): number {
+  const payload = dataUrl.slice(dataUrl.indexOf(",") + 1);
+  const padding = payload.endsWith("==") ? 2 : payload.endsWith("=") ? 1 : 0;
+  return Math.floor((payload.length * 3) / 4) - padding;
+}
+
 function requiredText(max: number, label: string) {
   return z
     .string()
@@ -52,6 +63,20 @@ export const contactInputSchema = z.object({
     .transform((value) => value || null)
     .nullable()
     .default(null),
+  photo: z
+    .string()
+    .trim()
+    .transform((value) => value || null)
+    .nullable()
+    .default(null)
+    .refine(
+      (value) => value === null || PHOTO_DATA_URL.test(value),
+      "Photo must be a PNG, JPEG, or WebP image",
+    )
+    .refine(
+      (value) => value === null || decodedBytes(value) <= MAX_PHOTO_BYTES,
+      "Photo is too large — choose a smaller image",
+    ),
 }) satisfies z.ZodType<ContactInput, unknown>;
 
 export type ContactFormValues = z.input<typeof contactInputSchema>;
@@ -77,7 +102,7 @@ export function zodFieldErrors(
 export interface ContactFieldSpec {
   name: keyof ContactInput;
   label: string;
-  type?: "text" | "email" | "tel" | "textarea";
+  type?: "text" | "email" | "tel" | "textarea" | "photo";
   required?: boolean;
   maxLength: number;
   placeholder?: string;
@@ -93,6 +118,20 @@ export interface ContactFieldGroup {
 }
 
 export const CONTACT_FIELD_GROUPS: ContactFieldGroup[] = [
+  {
+    title: "Photo",
+    description: "Optional. Cropped to a square and stored with the contact.",
+    fields: [
+      {
+        name: "photo",
+        label: "Photo",
+        type: "photo",
+        // A data URL, not prose: this bounds the base64 string, not the image.
+        maxLength: 2_000_000,
+        wide: true,
+      },
+    ],
+  },
   {
     title: "Identity",
     description: "First name, last name, and email are required.",

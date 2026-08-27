@@ -1,3 +1,4 @@
+import PhotoField from "@/components/contacts/PhotoField";
 import type { ContactFieldSpec } from "@/lib/contacts/schema";
 
 const CONTROL =
@@ -16,6 +17,21 @@ export default function Field({
   defaultValue?: string;
   error?: string;
 }) {
+  // A photo is a composite control (file picker, crop canvas, hidden input),
+  // so it renders its own label rather than borrowing the one below.
+  if (field.type === "photo") {
+    return (
+      <div className={field.wide ? "sm:col-span-2" : undefined}>
+        <PhotoField
+          name={field.name}
+          label={field.label}
+          defaultValue={defaultValue}
+          error={error}
+        />
+      </div>
+    );
+  }
+
   const id = `field-${field.name}`;
   const errorId = `${id}-error`;
   const borderClass = error
