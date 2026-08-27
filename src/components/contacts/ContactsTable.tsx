@@ -75,25 +75,25 @@ function ContactCards({
               <div className="min-w-0 flex-1">
                 <Link
                   href={`/contacts/${contact.id}`}
-                  className="block truncate font-medium text-foreground hover:text-primary"
+                  className="block break-words font-medium text-foreground hover:text-primary"
                 >
                   {contact.full_name}
                 </Link>
                 {subtitle ? (
-                  <span className="block truncate text-2sm text-muted-foreground">
+                  <span className="block break-words text-2sm text-muted-foreground">
                     {subtitle}
                   </span>
                 ) : null}
                 <a
                   href={`mailto:${contact.email}`}
-                  className="mt-1 block truncate text-2sm text-muted-foreground hover:text-primary"
+                  className="mt-1 block break-words text-2sm text-muted-foreground hover:text-primary"
                 >
                   {contact.email}
                 </a>
                 {contact.phone ? (
                   <a
                     href={`tel:${contact.phone}`}
-                    className="block truncate text-2sm text-muted-foreground hover:text-primary"
+                    className="block break-words text-2sm text-muted-foreground hover:text-primary"
                   >
                     {contact.phone}
                   </a>
