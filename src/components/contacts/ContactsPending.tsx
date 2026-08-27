@@ -33,7 +33,11 @@ export function useContactsPending(): PendingContextValue | null {
   return useContext(PendingContext);
 }
 
-/** Dims its children and blocks interaction while the shared transition runs. */
+/**
+ * Dims its children and blocks interaction while the shared transition runs.
+ * `inert` (not `pointer-events-none`) is what locks the stale results: it
+ * disables keyboard activation and focus as well as pointer input.
+ */
 export function PendingArea({
   children,
   className = "",
@@ -45,8 +49,9 @@ export function PendingArea({
   return (
     <div
       aria-busy={pending}
+      inert={pending || undefined}
       className={`transition-opacity ${
-        pending ? "pointer-events-none opacity-60" : ""
+        pending ? "opacity-60" : ""
       } ${className}`.trim()}
     >
       {children}
