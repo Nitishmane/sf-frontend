@@ -9,6 +9,7 @@ import {
   getContact,
   getHealth,
   listContacts,
+  toAddressErrors,
   toFieldErrors,
 } from "@/lib/contacts/api";
 import type { ContactInput } from "@/lib/contacts/types";
@@ -24,13 +25,9 @@ const INPUT: ContactInput = {
   phone: null,
   company: null,
   job_title: null,
-  address: null,
-  city: null,
-  state: null,
-  postal_code: null,
-  country: null,
   notes: null,
   photo: null,
+  addresses: [],
 };
 
 describe("listContacts", () => {
@@ -164,5 +161,32 @@ describe("error translation", () => {
 
   it("returns nothing for a non-validation body", () => {
     expect(toFieldErrors(new ApiError(500, "boom"))).toEqual({});
+  });
+
+  // A nested address failure ends in a field name — `postal_code` — that is not
+  // a contact field. Flattening it would file it against nothing and it would
+  // render nowhere, so the two halves are split by path shape, not by name.
+  const nested = new ApiError(
+    422,
+    JSON.stringify({
+      detail: [
+        { loc: ["body", "email"], msg: "value is not a valid email address" },
+        { loc: ["body", "addresses", 1, "postal_code"], msg: "String too long" },
+      ],
+    }),
+  );
+
+  it("leaves nested address failures out of the flat field errors", () => {
+    expect(toFieldErrors(nested)).toEqual({
+      email: "value is not a valid email address",
+    });
+  });
+
+  it("routes them to the address errors, keeping the row", () => {
+    expect(toAddressErrors(nested)).toEqual({ "1.postal_code": "String too long" });
+  });
+
+  it("returns no address errors for a non-validation body", () => {
+    expect(toAddressErrors(new ApiError(500, "boom"))).toEqual({});
   });
 });

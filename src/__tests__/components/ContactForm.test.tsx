@@ -33,7 +33,40 @@ describe("ContactForm", () => {
     expect(screen.getByLabelText(/first name/i)).toHaveValue("Ada");
     expect(screen.getByLabelText(/^email/i)).toHaveValue("ada@example.com");
     // Nulls become empty inputs rather than the string "null".
-    expect(screen.getByLabelText(/street address/i)).toHaveValue("");
+    expect(screen.getByLabelText(/notes/i)).toHaveValue("");
+  });
+
+  it("prefills the repeater from the contact's existing addresses", () => {
+    renderForm(
+      jest.fn(),
+      makeContact({
+        addresses: [
+          {
+            id: 7,
+            type: "Work",
+            street: "1 Market St",
+            city: "San Francisco",
+            state: null,
+            postal_code: null,
+            country: null,
+            is_primary: true,
+          },
+        ],
+      }),
+    );
+
+    expect(screen.getByLabelText(/street address/i)).toHaveValue("1 Market St");
+    expect(screen.getByLabelText(/^type/i)).toHaveValue("Work");
+    expect(screen.getByLabelText(/primary address/i)).toBeChecked();
+    // Null parts are empty inputs, same as the flat fields above.
+    expect(screen.getByLabelText(/postal code/i)).toHaveValue("");
+  });
+
+  it("offers an empty state instead of a blank row when there are no addresses", () => {
+    renderForm(jest.fn(), makeContact());
+
+    expect(screen.getByText(/no addresses yet/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/street address/i)).not.toBeInTheDocument();
   });
 
   it("submits the entered values to the action", async () => {
@@ -52,6 +85,35 @@ describe("ContactForm", () => {
     const formData = action.mock.calls[0][1];
     expect(formData.get("first_name")).toBe("Grace");
     expect(formData.get("email")).toBe("grace@example.com");
+  });
+
+  // The whole one-to-many story rides on this: rows added in the browser have
+  // to arrive as parallel `address_*` lists that line up by index.
+  it("submits each added address as a parallel entry", async () => {
+    const action = jest.fn<Promise<FormState>, [FormState, FormData]>(
+      async () => ({ status: "idle" }),
+    );
+    renderForm(action);
+
+    await userEvent.click(screen.getByRole("button", { name: /add an address/i }));
+    await userEvent.type(screen.getByLabelText(/city/i), "London");
+    await userEvent.click(
+      screen.getByRole("button", { name: /add another address/i }),
+    );
+
+    const cities = screen.getAllByLabelText(/city/i);
+    await userEvent.type(cities[1], "Paris");
+    await userEvent.selectOptions(screen.getAllByLabelText(/^type/i)[1], "Work");
+    await userEvent.click(screen.getAllByLabelText(/primary address/i)[1]);
+
+    await userEvent.click(screen.getByRole("button", { name: /create contact/i }));
+    await waitFor(() => expect(action).toHaveBeenCalled());
+
+    const formData = action.mock.calls[0][1];
+    expect(formData.getAll("address_city")).toEqual(["London", "Paris"]);
+    expect(formData.getAll("address_type")).toEqual(["Home", "Work"]);
+    // Only the chosen row submits, and it carries its index rather than "on".
+    expect(formData.getAll("address_is_primary")).toEqual(["1"]);
   });
 
   it("shows the summary and the per-field errors the action returns", async () => {
@@ -115,6 +177,53 @@ describe("ContactForm", () => {
     await waitFor(() => expect(action).toHaveBeenCalled());
 
     expect(action.mock.calls[0][1].get("photo")).toBe("");
+  });
+
+  // Qodo caught that address failures had nowhere to render: the user saw
+  // "Please fix the highlighted fields" with nothing highlighted. These cover
+  // the whole path, since the message is only useful if it lands on the right row.
+  it("shows an address error on the row it belongs to", async () => {
+    const rows = [
+      { type: "Home" as const, street: null, city: "London", state: null, postal_code: null, country: null, is_primary: false },
+      { type: "Work" as const, street: null, city: "Paris", state: null, postal_code: "bad", country: null, is_primary: false },
+    ];
+    const action = jest.fn(
+      async (): Promise<FormState> => ({
+        status: "error",
+        message: "Please fix the highlighted fields.",
+        addresses: rows,
+        addressErrors: { "1.postal_code": "Postal code must be 20 characters or fewer" },
+      }),
+    );
+    renderForm(action, makeContact({ addresses: [] }));
+
+    await userEvent.click(screen.getByRole("button", { name: /create contact/i }));
+
+    const postcodes = await screen.findAllByLabelText(/postal code/i);
+    expect(postcodes[1]).toHaveAttribute("aria-invalid", "true");
+    expect(postcodes[0]).not.toHaveAttribute("aria-invalid");
+    // Described by the message, not merely adjacent to it.
+    expect(postcodes[1]).toHaveAccessibleDescription(
+      "Postal code must be 20 characters or fewer",
+    );
+  });
+
+  it("shows a whole-list error above the rows rather than on one of them", async () => {
+    const action = jest.fn(
+      async (): Promise<FormState> => ({
+        status: "error",
+        message: "Please fix the highlighted fields.",
+        addresses: [],
+        addressErrors: { list: "A contact can have at most 10 addresses" },
+      }),
+    );
+    renderForm(action, makeContact());
+
+    await userEvent.click(screen.getByRole("button", { name: /create contact/i }));
+
+    expect(
+      await screen.findByText("A contact can have at most 10 addresses"),
+    ).toBeInTheDocument();
   });
 
   it("links back out without submitting", () => {

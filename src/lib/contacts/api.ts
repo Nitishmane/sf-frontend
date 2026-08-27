@@ -1,6 +1,7 @@
 import "server-only";
 
 import { ApiError, apiFetch, apiJson } from "@/lib/apiClient";
+import { addressErrorKey } from "./schema";
 import type {
   Contact,
   ContactInput,
@@ -123,6 +124,11 @@ export function apiErrorMessage(error: ApiError, fallback: string): string {
 /**
  * Turn a 422 `HTTPValidationError` into per-field messages. FastAPI reports the
  * location as `["body", "<field>"]`, so the second element is the input name.
+ *
+ * Nested address failures are skipped rather than flattened. Their last segment
+ * is a field name like `postal_code` that belongs to a *row*, so filing it here
+ * would attribute it to a contact field that no longer exists, and it would
+ * render nowhere. `toAddressErrors` takes those, keeping the row with the field.
  */
 export function toFieldErrors(
   error: ApiError,
@@ -132,10 +138,24 @@ export function toFieldErrors(
 
   const fieldErrors: Partial<Record<keyof ContactInput, string>> = {};
   for (const issue of detail) {
+    if (addressErrorKey(issue.loc ?? [])) continue;
     const field = issue.loc?.[issue.loc.length - 1];
     if (typeof field === "string" && field !== "body") {
       fieldErrors[field as keyof ContactInput] ??= issue.msg;
     }
   }
   return fieldErrors;
+}
+
+/** The address half of a 422, keyed by row and field the way Zod's is. */
+export function toAddressErrors(error: ApiError): Record<string, string> {
+  const detail = error.json<{ detail?: ValidationIssue[] }>()?.detail;
+  if (!Array.isArray(detail)) return {};
+
+  const addressErrors: Record<string, string> = {};
+  for (const issue of detail) {
+    const key = addressErrorKey(issue.loc ?? []);
+    if (key) addressErrors[key] ??= issue.msg;
+  }
+  return addressErrors;
 }

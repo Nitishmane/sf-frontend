@@ -2,12 +2,18 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Pencil } from "lucide-react";
+import { ChevronLeft, MapPin, Pencil } from "lucide-react";
 import ContactAvatar from "@/components/contacts/ContactAvatar";
 import DeleteContactButton from "@/components/contacts/DeleteContactButton";
 import { buttonClasses } from "@/components/ui/Button";
 import { getContact } from "@/lib/contacts/api";
-import { addressLine, formatTimestamp, jobLine } from "@/lib/contacts/format";
+import {
+  formatAddress,
+  formatTimestamp,
+  groupAddresses,
+  jobLine,
+  mapsUrl,
+} from "@/lib/contacts/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -43,7 +49,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
   if (!contact) notFound();
 
   const subtitle = jobLine(contact);
-  const address = addressLine(contact);
+  const addressGroups = groupAddresses(contact.addresses);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
@@ -102,13 +108,70 @@ export default async function ContactDetailPage({ params }: PageProps) {
         </Row>
         <Row label="Company">{contact.company}</Row>
         <Row label="Job title">{contact.job_title}</Row>
-        <Row label="Address">{address}</Row>
         <Row label="Notes">
           {contact.notes ? (
             <span className="whitespace-pre-wrap">{contact.notes}</span>
           ) : null}
         </Row>
       </dl>
+
+      {addressGroups.length ? (
+        <section className="space-y-3">
+          <h2 className="font-display text-sm font-semibold text-foreground">
+            Addresses
+          </h2>
+
+          {addressGroups.map((group) => (
+            <div
+              key={group.type}
+              className="rounded-lg border border-border bg-card"
+            >
+              <h3 className="border-b border-hairline px-4 py-2 text-[13px] font-medium text-muted-foreground">
+                {group.type}
+              </h3>
+
+              <ul className="divide-y divide-hairline">
+                {group.addresses.map((address) => {
+                  const line = formatAddress(address);
+                  const maps = mapsUrl(address);
+
+                  return (
+                    <li
+                      key={address.id}
+                      className="flex flex-wrap items-start justify-between gap-3 px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm text-foreground">{line ?? "—"}</p>
+                        {address.is_primary ? (
+                          <span className="mt-1 inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                            Primary
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {maps ? (
+                        <a
+                          href={maps}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex shrink-0 items-center gap-1 text-[13px] text-primary hover:underline"
+                        >
+                          <MapPin
+                            className="h-3.5 w-3.5"
+                            strokeWidth={1.75}
+                            aria-hidden="true"
+                          />
+                          Open in Maps
+                        </a>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       <dl className="rounded-lg border border-border bg-card/50 text-[13px]">
         <Row label="ID">

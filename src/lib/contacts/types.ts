@@ -3,6 +3,26 @@
  * Field names stay snake_case so payloads map 1:1 onto the wire format.
  */
 
+/** The `type` values the API's `AddressType` enum accepts, in display order. */
+export const ADDRESS_TYPES = ["Home", "Work", "Other"] as const;
+
+export type AddressType = (typeof ADDRESS_TYPES)[number];
+
+/** `AddressRead` — one stored address, nested inside a contact. */
+export interface Address {
+  id: number;
+  type: AddressType;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  is_primary: boolean;
+}
+
+/** `AddressCreate` — an address on the way in, before the server assigns an id. */
+export type AddressInput = Omit<Address, "id">;
+
 /** `ContactRead` — a stored contact, as returned by every contact endpoint. */
 export interface Contact {
   id: number;
@@ -12,24 +32,25 @@ export interface Contact {
   phone: string | null;
   company: string | null;
   job_title: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  postal_code: string | null;
-  country: string | null;
   notes: string | null;
   /** Base64 image data URL, or `null` when the contact has no photo. */
   photo: string | null;
+  addresses: Address[];
   created_at: string;
   updated_at: string;
   full_name: string;
 }
 
-/** Every editable field, i.e. `ContactCreate` / `ContactReplace`. */
+/**
+ * Every editable field, i.e. `ContactCreate` / `ContactReplace`.
+ *
+ * `addresses` is swapped for the id-less input shape rather than inherited,
+ * so a form can't accidentally be asked to supply server-assigned ids.
+ */
 export type ContactInput = Omit<
   Contact,
-  "id" | "created_at" | "updated_at" | "full_name"
->;
+  "id" | "created_at" | "updated_at" | "full_name" | "addresses"
+> & { addresses: AddressInput[] };
 
 /** `ContactPage` — one page of contacts plus the totals needed to paginate. */
 export interface ContactPage {
@@ -79,6 +100,14 @@ export type FormState = {
   fieldErrors?: Partial<Record<keyof ContactInput, string>>;
   /** Echo of the submitted values so the form survives a failed round trip. */
   values?: Partial<Record<keyof ContactInput, string>>;
+  /** Echoed separately: addresses are a repeating list, not a flat string field. */
+  addresses?: AddressInput[];
+  /**
+   * Address failures, keyed `"<row index>.<field>"` — plus `"list"` for one
+   * that belongs to the list itself. A bare field name could not say *which*
+   * row to highlight, which is the whole difficulty with a repeating group.
+   */
+  addressErrors?: Record<string, string>;
 };
 
 export const EMPTY_FORM_STATE: FormState = { status: "idle" };

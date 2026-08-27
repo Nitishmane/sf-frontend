@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ContactInput } from "./types";
+import { ADDRESS_TYPES, type AddressInput, type ContactInput } from "./types";
 
 /**
  * Client/server-shared validation for the contact form.
@@ -31,6 +31,19 @@ function decodedBytes(dataUrl: string): number {
   return Math.floor((payload.length * 3) / 4) - padding;
 }
 
+/** Mirrors `MAX_ADDRESSES` in the API's `app/schemas.py`. */
+export const MAX_ADDRESSES = 10;
+
+export const addressInputSchema = z.object({
+  type: z.enum(ADDRESS_TYPES),
+  street: optionalText(300, "Street address"),
+  city: optionalText(120, "City"),
+  state: optionalText(120, "State"),
+  postal_code: optionalText(20, "Postal code"),
+  country: optionalText(120, "Country"),
+  is_primary: z.boolean().default(false),
+}) satisfies z.ZodType<AddressInput, unknown>;
+
 function requiredText(max: number, label: string) {
   return z
     .string()
@@ -52,11 +65,6 @@ export const contactInputSchema = z.object({
   phone: optionalText(40, "Phone"),
   company: optionalText(200, "Company"),
   job_title: optionalText(200, "Job title"),
-  address: optionalText(300, "Address"),
-  city: optionalText(120, "City"),
-  state: optionalText(120, "State"),
-  postal_code: optionalText(20, "Postal code"),
-  country: optionalText(120, "Country"),
   notes: z
     .string()
     .trim()
@@ -77,22 +85,70 @@ export const contactInputSchema = z.object({
       (value) => value === null || decodedBytes(value) <= MAX_PHOTO_BYTES,
       "Photo is too large — choose a smaller image",
     ),
+  addresses: z
+    .array(addressInputSchema)
+    .max(MAX_ADDRESSES, `A contact can have at most ${MAX_ADDRESSES} addresses`)
+    .default([]),
 }) satisfies z.ZodType<ContactInput, unknown>;
 
 export type ContactFormValues = z.input<typeof contactInputSchema>;
 
-/** Collapse a ZodError into one message per field, keyed by input name. */
-export function zodFieldErrors(
+/**
+ * Collapse a ZodError into one message per field, keyed by input name.
+ *
+ * The field union is a parameter because the same collapsing works for an
+ * address as well as a contact; it defaults to `ContactInput` so the common
+ * call site reads unchanged.
+ */
+export function zodFieldErrors<Field extends string = keyof ContactInput>(
   error: z.ZodError,
-): Partial<Record<keyof ContactInput, string>> {
-  const fieldErrors: Partial<Record<keyof ContactInput, string>> = {};
+): Partial<Record<Field, string>> {
+  const fieldErrors: Partial<Record<Field, string>> = {};
   for (const issue of error.issues) {
     const key = issue.path[0];
     if (typeof key === "string" && !(key in fieldErrors)) {
-      fieldErrors[key as keyof ContactInput] = issue.message;
+      fieldErrors[key as Field] = issue.message;
     }
   }
   return fieldErrors;
+}
+
+/** Key for a failure that belongs to the whole list rather than one row. */
+export const ADDRESS_LIST_ERROR = "list";
+
+/**
+ * Locate an address failure within a validation path.
+ *
+ * Zod reports `["addresses", 0, "postal_code"]` and FastAPI reports
+ * `["body", "addresses", 0, "postal_code"]`, so one parser serves both — it
+ * finds the segment rather than assuming a position. The returned key pairs
+ * the row with the field, which is the smallest thing that can point at the
+ * input that actually failed; collapsing to either end of the path loses half
+ * of that and leaves the user with a highlighted nothing.
+ *
+ * Returns `null` for paths that have nothing to do with addresses.
+ */
+export function addressErrorKey(path: readonly PropertyKey[]): string | null {
+  const at = path.indexOf("addresses");
+  if (at === -1) return null;
+
+  const index = path[at + 1];
+  const field = path[at + 2];
+  // A bare `["addresses"]` is a failure of the list itself — too many of them.
+  if (typeof index !== "number" || typeof field !== "string") {
+    return ADDRESS_LIST_ERROR;
+  }
+  return `${index}.${field}`;
+}
+
+/** Collapse the address failures in a ZodError, keyed by row and field. */
+export function zodAddressErrors(error: z.ZodError): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const key = addressErrorKey(issue.path);
+    if (key && !(key in errors)) errors[key] = issue.message;
+  }
+  return errors;
 }
 
 /* ------------------------------------------------------------------ */
@@ -191,48 +247,8 @@ export const CONTACT_FIELD_GROUPS: ContactFieldGroup[] = [
       },
     ],
   },
-  {
-    title: "Address",
-    description: "Optional postal details.",
-    fields: [
-      {
-        name: "address",
-        label: "Street address",
-        maxLength: 300,
-        placeholder: "1 Market St, Suite 400",
-        autoComplete: "street-address",
-        wide: true,
-      },
-      {
-        name: "city",
-        label: "City",
-        maxLength: 120,
-        placeholder: "San Francisco",
-        autoComplete: "address-level2",
-      },
-      {
-        name: "state",
-        label: "State / region",
-        maxLength: 120,
-        placeholder: "CA",
-        autoComplete: "address-level1",
-      },
-      {
-        name: "postal_code",
-        label: "Postal code",
-        maxLength: 20,
-        placeholder: "94105",
-        autoComplete: "postal-code",
-      },
-      {
-        name: "country",
-        label: "Country",
-        maxLength: 120,
-        placeholder: "USA",
-        autoComplete: "country-name",
-      },
-    ],
-  },
+  // Addresses are deliberately *not* a field group: they repeat, so they are
+  // rendered by `AddressFields` and parsed by `formDataToAddresses` below.
   {
     title: "Notes",
     description: "Anything worth remembering. No length limit.",
@@ -263,4 +279,49 @@ export function formDataToValues(
       String(formData.get(field.name) ?? ""),
     ]),
   ) as Record<keyof ContactInput, string>;
+}
+
+/** The repeated input names one address row contributes to the form. */
+const ADDRESS_PARTS = [
+  "street",
+  "city",
+  "state",
+  "postal_code",
+  "country",
+] as const;
+
+/**
+ * Rebuild the address list from a submitted form.
+ *
+ * Each row contributes one entry to `address_type`, `address_street`, and so
+ * on, so the Nth entry of every list belongs to the same row — `getAll` keeps
+ * document order, which is what makes the zip safe. Rows the user added but
+ * left completely blank are dropped rather than sent as empty addresses.
+ */
+export function formDataToAddresses(formData: FormData): AddressInput[] {
+  const types = formData.getAll("address_type").map(String);
+  const columns = Object.fromEntries(
+    ADDRESS_PARTS.map((part) => [
+      part,
+      formData.getAll(`address_${part}`).map((value) => String(value).trim()),
+    ]),
+  ) as Record<(typeof ADDRESS_PARTS)[number], string[]>;
+
+  const primary = new Set(formData.getAll("address_is_primary").map(String));
+
+  return types
+    .map((type, index) => ({
+      type: (ADDRESS_TYPES as readonly string[]).includes(type)
+        ? (type as AddressInput["type"])
+        : "Home",
+      street: columns.street[index] || null,
+      city: columns.city[index] || null,
+      state: columns.state[index] || null,
+      postal_code: columns.postal_code[index] || null,
+      country: columns.country[index] || null,
+      is_primary: primary.has(String(index)),
+    }))
+    .filter((address) =>
+      ADDRESS_PARTS.some((part) => address[part] !== null),
+    );
 }
