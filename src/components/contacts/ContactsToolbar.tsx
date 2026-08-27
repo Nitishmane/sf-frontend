@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Search, X } from "lucide-react";
+import { useContactsPending } from "./ContactsPending";
 import { contactsHref, type ContactListQuery } from "@/lib/contacts/query";
 import { PER_PAGE_OPTIONS } from "@/lib/contacts/types";
 
@@ -15,7 +16,12 @@ const DEBOUNCE_MS = 300;
  */
 export default function ContactsToolbar({ query }: { query: ContactListQuery }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  // Prefer the shared transition so the results below can dim while it runs;
+  // fall back to a local one when rendered outside the provider.
+  const [localPending, localStart] = useTransition();
+  const shared = useContactsPending();
+  const isPending = shared?.isPending ?? localPending;
+  const startTransition = shared?.startTransition ?? localStart;
   const [term, setTerm] = useState(query.search);
   const [urlTerm, setUrlTerm] = useState(query.search);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -53,17 +59,20 @@ export default function ContactsToolbar({ query }: { query: ContactListQuery }) 
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="relative min-w-[220px] flex-1">
+        <label htmlFor="contacts-search" className="sr-only">
+          Search contacts
+        </label>
         <Search
           className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
           strokeWidth={1.75}
           aria-hidden="true"
         />
         <input
+          id="contacts-search"
           type="search"
           value={term}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search name, email, company, or phone…"
-          aria-label="Search contacts"
           className="h-9 w-full rounded-md border border-border bg-input pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground/70 focus:border-primary"
         />
         <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
@@ -85,7 +94,7 @@ export default function ContactsToolbar({ query }: { query: ContactListQuery }) 
         </span>
       </div>
 
-      <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+      <label className="flex items-center gap-2 text-2sm text-muted-foreground">
         Per page
         <select
           value={query.perPage}

@@ -29,7 +29,7 @@ export default function Pagination({
       aria-label="Pagination"
       className="flex flex-wrap items-center justify-between gap-3"
     >
-      <p className="text-[13px] text-muted-foreground" aria-live="polite">
+      <p className="text-2sm text-muted-foreground" aria-live="polite">
         {shown === 0 ? (
           "No contacts to show"
         ) : (
@@ -42,7 +42,7 @@ export default function Pagination({
       </p>
 
       <div className="flex items-center gap-2">
-        <span className="text-[13px] text-muted-foreground">
+        <span className="text-2sm text-muted-foreground">
           Page {Math.min(query.page, pages)} of {pages}
         </span>
 
@@ -57,7 +57,10 @@ export default function Pagination({
             Previous
           </Link>
         ) : (
-          <span className={`${buttonClasses("secondary", "sm")} opacity-50`} aria-disabled="true">
+          <span
+            className={`${buttonClasses("secondary", "sm")} select-none opacity-70`}
+            aria-disabled="true"
+          >
             <ChevronLeft className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
             Previous
           </span>
@@ -74,7 +77,10 @@ export default function Pagination({
             <ChevronRight className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
           </Link>
         ) : (
-          <span className={`${buttonClasses("secondary", "sm")} opacity-50`} aria-disabled="true">
+          <span
+            className={`${buttonClasses("secondary", "sm")} select-none opacity-70`}
+            aria-disabled="true"
+          >
             Next
             <ChevronRight className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
           </span>

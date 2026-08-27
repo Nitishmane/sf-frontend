@@ -55,7 +55,7 @@ export default function Field({
     <div className={field.wide ? "sm:col-span-2" : undefined}>
       <label
         htmlFor={id}
-        className="mb-1.5 block text-[13px] font-medium text-foreground"
+        className="mb-1.5 block text-2sm font-medium text-foreground"
       >
         {field.label}
         {field.required ? (
@@ -63,7 +63,7 @@ export default function Field({
             *
           </span>
         ) : (
-          <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
+          <span className="ml-1.5 text-2xs font-normal text-muted-foreground">
             optional
           </span>
         )}
@@ -76,7 +76,7 @@ export default function Field({
       )}
 
       {error ? (
-        <p id={errorId} role="alert" className="mt-1.5 text-[13px] text-destructive">
+        <p id={errorId} role="alert" className="mt-1.5 text-2sm text-destructive">
           {error}
         </p>
       ) : null}

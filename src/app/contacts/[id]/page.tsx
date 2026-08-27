@@ -36,7 +36,7 @@ export async function generateMetadata({
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid gap-1 border-b border-hairline px-4 py-3 last:border-b-0 sm:grid-cols-[10rem_1fr] sm:gap-4">
-      <dt className="text-[13px] text-muted-foreground">{label}</dt>
+      <dt className="text-2sm text-muted-foreground">{label}</dt>
       <dd className="break-words text-sm text-foreground">
         {children ?? <span className="text-muted-foreground/50">—</span>}
       </dd>
@@ -55,7 +55,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
       <Link
         href="/contacts"
-        className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1 text-2sm text-muted-foreground hover:text-foreground"
       >
         <ChevronLeft className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
         All contacts
@@ -126,7 +126,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
               key={group.type}
               className="rounded-lg border border-border bg-card"
             >
-              <h3 className="border-b border-hairline px-4 py-2 text-[13px] font-medium text-muted-foreground">
+              <h3 className="border-b border-hairline px-4 py-2 text-2sm font-medium text-muted-foreground">
                 {group.type}
               </h3>
 
@@ -143,7 +143,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
                       <div className="min-w-0">
                         <p className="text-sm text-foreground">{line ?? "—"}</p>
                         {address.is_primary ? (
-                          <span className="mt-1 inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                          <span className="mt-1 inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary">
                             Primary
                           </span>
                         ) : null}
@@ -154,7 +154,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
                           href={maps}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex shrink-0 items-center gap-1 text-[13px] text-primary hover:underline"
+                          className="inline-flex shrink-0 items-center gap-1 text-2sm text-primary hover:underline"
                         >
                           <MapPin
                             className="h-3.5 w-3.5"
@@ -173,7 +173,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
         </section>
       ) : null}
 
-      <dl className="rounded-lg border border-border bg-card/50 text-[13px]">
+      <dl className="rounded-lg border border-border bg-card/50 text-2sm">
         <Row label="ID">
           <span className="font-mono">{contact.id}</span>
         </Row>

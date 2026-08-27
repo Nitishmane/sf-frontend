@@ -22,7 +22,7 @@ export default function ContactsTable({
         <caption className="sr-only">
           Contacts, sorted by {query.sortBy.replace("_", " ")} {query.order}
         </caption>
-        <thead className="border-b border-hairline bg-secondary/40 text-left text-[13px] font-medium">
+        <thead className="border-b border-hairline bg-secondary/40 text-left text-2sm font-medium">
           <tr>
             <SortHeader field="last_name" label="Name" query={query} />
             <SortHeader field="email" label="Email" query={query} />
@@ -61,7 +61,7 @@ export default function ContactsTable({
                         {contact.full_name}
                       </Link>
                       {subtitle ? (
-                        <span className="block truncate text-[12px] text-muted-foreground lg:hidden">
+                        <span className="block truncate text-xs text-muted-foreground lg:hidden">
                           {subtitle}
                         </span>
                       ) : null}

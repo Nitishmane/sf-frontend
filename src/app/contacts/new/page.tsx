@@ -15,7 +15,7 @@ export default function NewContactPage() {
       <div>
         <Link
           href="/contacts"
-          className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1 text-2sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
           All contacts

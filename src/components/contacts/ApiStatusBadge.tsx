@@ -13,7 +13,7 @@ export default function ApiStatusBadge({
 
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/40 px-2.5 py-1 text-[11px] text-muted-foreground"
+      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/40 px-2.5 py-1 text-2xs text-muted-foreground"
       title={
         ok
           ? `API healthy · ${health?.database} · ${health?.contacts} stored`

@@ -58,6 +58,12 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontSize: {
+        // Between the default xs (12px) and sm (14px); the app's meta/label size.
+        "2sm": ["0.8125rem", { lineHeight: "1.25rem" }],
+        // Below the default xs; fine print such as badges and avatar initials.
+        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
+      },
       fontFamily: {
         sans: [
           "var(--font-sans)",

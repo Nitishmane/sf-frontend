@@ -3,7 +3,7 @@ import { avatarHue, initials } from "@/lib/contacts/format";
 import type { Contact } from "@/lib/contacts/types";
 
 const SIZES = {
-  sm: "h-8 w-8 text-[11px]",
+  sm: "h-8 w-8 text-2xs",
   md: "h-10 w-10 text-sm",
   lg: "h-14 w-14 text-lg",
 } as const;

@@ -184,9 +184,9 @@ export default function PhotoField({
 
   return (
     <div>
-      <span className="mb-1.5 block text-[13px] font-medium text-foreground">
+      <span className="mb-1.5 block text-2sm font-medium text-foreground">
         {label}
-        <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
+        <span className="ml-1.5 text-2xs font-normal text-muted-foreground">
           optional
         </span>
       </span>
@@ -233,7 +233,7 @@ export default function PhotoField({
           <div>
             <label
               htmlFor={inputId}
-              className="mb-1 block text-[13px] text-muted-foreground"
+              className="mb-1 block text-2sm text-muted-foreground"
             >
               {busy ? "Preparing photo…" : "PNG, JPEG, or WebP, up to 5 MB."}
             </label>
@@ -253,7 +253,7 @@ export default function PhotoField({
             <div>
               <label
                 htmlFor={`${inputId}-zoom`}
-                className="mb-1 block text-[13px] text-muted-foreground"
+                className="mb-1 block text-2sm text-muted-foreground"
               >
                 Zoom
               </label>
@@ -274,7 +274,7 @@ export default function PhotoField({
             <button
               type="button"
               onClick={handleRemove}
-              className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-destructive"
+              className="inline-flex items-center gap-1.5 text-2sm text-muted-foreground hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
               Remove photo
@@ -284,7 +284,7 @@ export default function PhotoField({
       </div>
 
       {shownError ? (
-        <p id={errorId} role="alert" className="mt-1.5 text-[13px] text-destructive">
+        <p id={errorId} role="alert" className="mt-1.5 text-2sm text-destructive">
           {shownError}
         </p>
       ) : null}

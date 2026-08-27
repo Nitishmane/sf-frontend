@@ -45,7 +45,7 @@ export default function SortHeader({
           )
         ) : (
           <ChevronsUpDown
-            className="h-3.5 w-3.5 opacity-50"
+            className="h-3.5 w-3.5"
             strokeWidth={2}
             aria-hidden="true"
           />

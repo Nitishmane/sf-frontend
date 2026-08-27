@@ -109,13 +109,13 @@ export default function AddressFields({
           strokeWidth={1.5}
           aria-hidden="true"
         />
-        <p className="mt-2 text-[13px] text-muted-foreground">
+        <p className="mt-2 text-2sm text-muted-foreground">
           No addresses yet.
         </p>
         <button
           type="button"
           onClick={addRow}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-foreground hover:bg-input"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-2sm font-medium text-foreground hover:bg-input"
         >
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           Add an address
@@ -133,7 +133,7 @@ export default function AddressFields({
           key={row.key}
           className="rounded-md border border-border p-4"
         >
-          <legend className="px-1.5 text-[13px] font-medium text-muted-foreground">
+          <legend className="px-1.5 text-2sm font-medium text-muted-foreground">
             Address {index + 1}
           </legend>
 
@@ -147,7 +147,7 @@ export default function AddressFields({
             <div>
               <label
                 htmlFor={`${groupId}-type-${row.key}`}
-                className="mb-1.5 block text-[13px] font-medium text-foreground"
+                className="mb-1.5 block text-2sm font-medium text-foreground"
               >
                 Type
               </label>
@@ -171,7 +171,7 @@ export default function AddressFields({
             </div>
 
             <div className="flex items-end pb-2">
-              <label className="inline-flex items-center gap-2 text-[13px] text-foreground">
+              <label className="inline-flex items-center gap-2 text-2sm text-foreground">
                 <input
                   type="radio"
                   name={`${groupId}-primary`}
@@ -244,7 +244,7 @@ export default function AddressFields({
           <button
             type="button"
             onClick={() => removeRow(row.key)}
-            className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-destructive"
+            className="mt-3 inline-flex items-center gap-1.5 text-2sm text-muted-foreground hover:text-destructive"
           >
             <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
             Remove this address
@@ -256,13 +256,13 @@ export default function AddressFields({
         <button
           type="button"
           onClick={addRow}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-foreground hover:bg-input"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-2sm font-medium text-foreground hover:bg-input"
         >
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           Add another address
         </button>
       ) : (
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-2sm text-muted-foreground">
           That is the maximum of {MAX_ADDRESSES} addresses.
         </p>
       )}
@@ -277,7 +277,7 @@ function ListError({ message }: { message?: string }) {
   return (
     <p
       role="alert"
-      className="mb-3 text-[13px] font-medium text-destructive"
+      className="mb-3 text-2sm font-medium text-destructive"
     >
       {message}
     </p>
@@ -313,7 +313,7 @@ function TextInput({
     <div className={wide ? "sm:col-span-2" : undefined}>
       <label
         htmlFor={id}
-        className="mb-1.5 block text-[13px] font-medium text-foreground"
+        className="mb-1.5 block text-2sm font-medium text-foreground"
       >
         {label}
       </label>
@@ -332,7 +332,7 @@ function TextInput({
         className={`${CONTROL} ${error ? "border-destructive" : ""}`}
       />
       {error ? (
-        <p id={errorId} role="alert" className="mt-1 text-[13px] text-destructive">
+        <p id={errorId} role="alert" className="mt-1 text-2sm text-destructive">
           {error}
         </p>
       ) : null}
