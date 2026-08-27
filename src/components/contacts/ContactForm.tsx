@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { AlertCircle, Loader2 } from "lucide-react";
 import Field from "@/components/ui/Field";
+import AddressFields from "@/components/contacts/AddressFields";
 import Button, { buttonClasses } from "@/components/ui/Button";
 import { CONTACT_FIELD_GROUPS } from "@/lib/contacts/schema";
 import {
@@ -51,8 +52,15 @@ export default function ContactForm({
   const [state, formAction] = useActionState(action, EMPTY_FORM_STATE);
 
   function valueFor(name: keyof ContactInput): string {
-    return state.values?.[name] ?? contact?.[name] ?? "";
+    const value = state.values?.[name] ?? contact?.[name] ?? "";
+    // `addresses` is a list, not a string; it is rendered by AddressFields and
+    // never reaches here, but the union type has to be narrowed regardless.
+    return typeof value === "string" ? value : "";
   }
+
+  // Prefer the echoed submission over the stored contact, so a failed round
+  // trip does not silently discard rows the user just added.
+  const addresses = state.addresses ?? contact?.addresses ?? [];
 
   return (
     <form action={formAction} noValidate className="space-y-8">
@@ -95,6 +103,21 @@ export default function ContactForm({
           </div>
         </fieldset>
       ))}
+
+      <fieldset className="space-y-4">
+        <legend className="sr-only">Addresses</legend>
+
+        <div className="border-b border-hairline pb-2">
+          <h2 className="font-display text-sm font-semibold text-foreground">
+            Addresses
+          </h2>
+          <p className="text-[13px] text-muted-foreground">
+            Optional. Add a home and a work address, or as many as you need.
+          </p>
+        </div>
+
+        <AddressFields defaultValue={addresses} />
+      </fieldset>
 
       <div className="flex items-center gap-2 border-t border-hairline pt-4">
         <SubmitButton label={submitLabel} />

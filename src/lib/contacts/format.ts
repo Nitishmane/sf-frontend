@@ -1,4 +1,4 @@
-import type { Contact } from "./types";
+import { ADDRESS_TYPES, type Address, type AddressType, type Contact } from "./types";
 
 /** Presentation helpers shared by the list, the detail page, and the cards. */
 
@@ -44,13 +44,34 @@ export function jobLine(contact: Contact): string | null {
 }
 
 /** Single-line postal address, skipping the parts that are not filled in. */
-export function addressLine(contact: Contact): string | null {
+export function formatAddress(address: Address): string | null {
   const parts = [
-    contact.address,
-    contact.city,
-    [contact.state, contact.postal_code].filter(Boolean).join(" "),
-    contact.country,
+    address.street,
+    address.city,
+    [address.state, address.postal_code].filter(Boolean).join(" "),
+    address.country,
   ].filter((part): part is string => Boolean(part && part.trim()));
 
   return parts.length ? parts.join(", ") : null;
+}
+
+/**
+ * Bucket addresses by type in a fixed Home → Work → Other order, dropping the
+ * buckets that are empty. The API preserves insertion order within a type, and
+ * that ordering is kept here.
+ */
+export function groupAddresses(
+  addresses: Address[],
+): { type: AddressType; addresses: Address[] }[] {
+  return ADDRESS_TYPES.map((type) => ({
+    type,
+    addresses: addresses.filter((address) => address.type === type),
+  })).filter((group) => group.addresses.length > 0);
+}
+
+/** A Google Maps search link for an address, or `null` if there is nothing to search. */
+export function mapsUrl(address: Address): string | null {
+  const query = formatAddress(address);
+  if (!query) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }

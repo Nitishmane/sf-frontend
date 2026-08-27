@@ -12,6 +12,7 @@ import {
 } from "@/lib/contacts/api";
 import {
   contactInputSchema,
+  formDataToAddresses,
   formDataToValues,
   zodFieldErrors,
 } from "@/lib/contacts/schema";
@@ -39,15 +40,24 @@ export async function saveContactAction(
   formData: FormData,
 ): Promise<FormState> {
   const values = formDataToValues(formData);
+  // Addresses repeat, so they cannot come from the flat field map — they are
+  // zipped back out of the parallel `address_*` lists the repeater submits.
+  const addresses = formDataToAddresses(formData);
 
-  const parsed = contactInputSchema.safeParse(values);
+  /** Every failure echoes both halves of the form so nothing is retyped. */
+  const fail = (state: Omit<FormState, "status" | "values" | "addresses">): FormState => ({
+    ...state,
+    status: "error",
+    values,
+    addresses,
+  });
+
+  const parsed = contactInputSchema.safeParse({ ...values, addresses });
   if (!parsed.success) {
-    return {
-      status: "error",
+    return fail({
       message: "Please fix the highlighted fields.",
       fieldErrors: zodFieldErrors(parsed.error),
-      values,
-    };
+    });
   }
 
   let saved: Contact;
@@ -58,32 +68,26 @@ export async function saveContactAction(
         : await replaceContact(contactId, parsed.data);
   } catch (error) {
     if (error instanceof ApiUnreachableError) {
-      return { status: "error", message: UNREACHABLE, values };
+      return fail({ message: UNREACHABLE });
     }
     if (error instanceof ApiError) {
       if (error.status === 409) {
-        return {
-          status: "error",
+        return fail({
           message: "That email address is already taken.",
           fieldErrors: {
             email: apiErrorMessage(error, "This email is already in use."),
           },
-          values,
-        };
+        });
       }
       if (error.status === 422) {
-        return {
-          status: "error",
+        return fail({
           message: "The API rejected these values.",
           fieldErrors: toFieldErrors(error),
-          values,
-        };
+        });
       }
-      return {
-        status: "error",
+      return fail({
         message: apiErrorMessage(error, "The contact could not be saved."),
-        values,
-      };
+      });
     }
     throw error;
   }
