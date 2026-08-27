@@ -80,6 +80,43 @@ describe("ContactForm", () => {
     );
   });
 
+  // `formDataToValues()` only reads fields registered in CONTACT_FIELD_GROUPS,
+  // so a photo that is not a real field spec is absent from the PUT body and
+  // the API clears it. These two guard that path.
+  it("renders an existing photo into the hidden photo input", () => {
+    const photo = "data:image/jpeg;base64,/9j/4AAQSkZJRg==";
+    const { container } = renderForm(jest.fn(), makeContact({ photo }));
+
+    expect(
+      container.querySelector('input[type="hidden"][name="photo"]'),
+    ).toHaveValue(photo);
+  });
+
+  it("submits an untouched photo back unchanged", async () => {
+    const photo = "data:image/jpeg;base64,/9j/4AAQSkZJRg==";
+    const action = jest.fn<Promise<FormState>, [FormState, FormData]>(
+      async () => ({ status: "idle" }),
+    );
+    renderForm(action, makeContact({ photo }));
+
+    await userEvent.click(screen.getByRole("button", { name: /create contact/i }));
+    await waitFor(() => expect(action).toHaveBeenCalled());
+
+    expect(action.mock.calls[0][1].get("photo")).toBe(photo);
+  });
+
+  it("submits an empty photo for a contact without one", async () => {
+    const action = jest.fn<Promise<FormState>, [FormState, FormData]>(
+      async () => ({ status: "idle" }),
+    );
+    renderForm(action, makeContact());
+
+    await userEvent.click(screen.getByRole("button", { name: /create contact/i }));
+    await waitFor(() => expect(action).toHaveBeenCalled());
+
+    expect(action.mock.calls[0][1].get("photo")).toBe("");
+  });
+
   it("links back out without submitting", () => {
     renderForm(jest.fn());
     expect(screen.getByRole("link", { name: /cancel/i })).toHaveAttribute(
