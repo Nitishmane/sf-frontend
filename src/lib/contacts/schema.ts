@@ -113,6 +113,44 @@ export function zodFieldErrors<Field extends string = keyof ContactInput>(
   return fieldErrors;
 }
 
+/** Key for a failure that belongs to the whole list rather than one row. */
+export const ADDRESS_LIST_ERROR = "list";
+
+/**
+ * Locate an address failure within a validation path.
+ *
+ * Zod reports `["addresses", 0, "postal_code"]` and FastAPI reports
+ * `["body", "addresses", 0, "postal_code"]`, so one parser serves both — it
+ * finds the segment rather than assuming a position. The returned key pairs
+ * the row with the field, which is the smallest thing that can point at the
+ * input that actually failed; collapsing to either end of the path loses half
+ * of that and leaves the user with a highlighted nothing.
+ *
+ * Returns `null` for paths that have nothing to do with addresses.
+ */
+export function addressErrorKey(path: readonly PropertyKey[]): string | null {
+  const at = path.indexOf("addresses");
+  if (at === -1) return null;
+
+  const index = path[at + 1];
+  const field = path[at + 2];
+  // A bare `["addresses"]` is a failure of the list itself — too many of them.
+  if (typeof index !== "number" || typeof field !== "string") {
+    return ADDRESS_LIST_ERROR;
+  }
+  return `${index}.${field}`;
+}
+
+/** Collapse the address failures in a ZodError, keyed by row and field. */
+export function zodAddressErrors(error: z.ZodError): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const key = addressErrorKey(issue.path);
+    if (key && !(key in errors)) errors[key] = issue.message;
+  }
+  return errors;
+}
+
 /* ------------------------------------------------------------------ */
 /* Form metadata — one source of truth for the fields and their limits */
 /* ------------------------------------------------------------------ */

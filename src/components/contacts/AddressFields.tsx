@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { MapPin, Plus, Trash2 } from "lucide-react";
-import { MAX_ADDRESSES } from "@/lib/contacts/schema";
+import { ADDRESS_LIST_ERROR, MAX_ADDRESSES } from "@/lib/contacts/schema";
 import { ADDRESS_TYPES, type AddressInput } from "@/lib/contacts/types";
 
 /**
@@ -32,20 +32,49 @@ const EMPTY: AddressInput = {
  *  until the server assigns one — so carry a client-side key alongside each. */
 type Row = { key: number; value: AddressInput };
 
-let nextKey = 0;
-const toRow = (value: AddressInput): Row => ({ key: nextKey++, value });
+/**
+ * One past the largest key in use.
+ *
+ * Deriving this from the rows rather than keeping a counter is what makes the
+ * component safe to server render: there is no mutable state whose lifetime
+ * differs between the server and a freshly loaded browser, so the ids come out
+ * identical on both sides and hydration matches.
+ */
+const nextKeyFor = (rows: readonly Row[]): number =>
+  rows.reduce((max, row) => Math.max(max, row.key), -1) + 1;
+
+const toRows = (values: readonly AddressInput[]): Row[] =>
+  values.map((value, index) => ({ key: index, value }));
 
 export default function AddressFields({
   defaultValue = [],
+  errors,
 }: {
   defaultValue?: AddressInput[];
+  /** Keyed `"<row index>.<field>"`, plus `"list"` for whole-list failures. */
+  errors?: Record<string, string>;
 }) {
-  const [rows, setRows] = useState<Row[]>(() => defaultValue.map(toRow));
+  const [rows, setRows] = useState<Row[]>(() => toRows(defaultValue));
   const groupId = useId();
+
+  // Resync when the echoed list changes identity, which happens exactly once
+  // per rejected submit. This is not cosmetic: `errors` is keyed by position in
+  // the *submitted* list, and submitting drops blank rows. A user with an empty
+  // row above a bad one would otherwise see the message land on the wrong row.
+  // Adopting the echo puts the rendered rows and the error keys back in step.
+  const [echoed, setEchoed] = useState(defaultValue);
+  if (defaultValue !== echoed) {
+    setEchoed(defaultValue);
+    setRows(toRows(defaultValue));
+  }
+
+  const listError = errors?.[ADDRESS_LIST_ERROR];
 
   function addRow() {
     setRows((previous) =>
-      previous.length >= MAX_ADDRESSES ? previous : [...previous, toRow(EMPTY)],
+      previous.length >= MAX_ADDRESSES
+        ? previous
+        : [...previous, { key: nextKeyFor(previous), value: EMPTY }],
     );
   }
 
@@ -74,6 +103,7 @@ export default function AddressFields({
   if (rows.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-border p-6 text-center">
+        <ListError message={listError} />
         <MapPin
           className="mx-auto h-5 w-5 text-muted-foreground"
           strokeWidth={1.5}
@@ -96,6 +126,8 @@ export default function AddressFields({
 
   return (
     <div className="space-y-4">
+      <ListError message={listError} />
+
       {rows.map((row, index) => (
         <fieldset
           key={row.key}
@@ -161,6 +193,7 @@ export default function AddressFields({
               autoComplete="street-address"
               wide
               onChange={(street) => patchRow(row.key, { street })}
+              error={errors?.[`${index}.street`]}
             />
             <TextInput
               id={`${groupId}-city-${row.key}`}
@@ -171,6 +204,7 @@ export default function AddressFields({
               placeholder="San Francisco"
               autoComplete="address-level2"
               onChange={(city) => patchRow(row.key, { city })}
+              error={errors?.[`${index}.city`]}
             />
             <TextInput
               id={`${groupId}-state-${row.key}`}
@@ -181,6 +215,7 @@ export default function AddressFields({
               placeholder="CA"
               autoComplete="address-level1"
               onChange={(state) => patchRow(row.key, { state })}
+              error={errors?.[`${index}.state`]}
             />
             <TextInput
               id={`${groupId}-postal-${row.key}`}
@@ -191,6 +226,7 @@ export default function AddressFields({
               placeholder="94105"
               autoComplete="postal-code"
               onChange={(postal_code) => patchRow(row.key, { postal_code })}
+              error={errors?.[`${index}.postal_code`]}
             />
             <TextInput
               id={`${groupId}-country-${row.key}`}
@@ -201,6 +237,7 @@ export default function AddressFields({
               placeholder="USA"
               autoComplete="country-name"
               onChange={(country) => patchRow(row.key, { country })}
+              error={errors?.[`${index}.country`]}
             />
           </div>
 
@@ -233,6 +270,20 @@ export default function AddressFields({
   );
 }
 
+/** A failure of the list itself rather than of any one row. */
+function ListError({ message }: { message?: string }) {
+  if (!message) return null;
+
+  return (
+    <p
+      role="alert"
+      className="mb-3 text-[13px] font-medium text-destructive"
+    >
+      {message}
+    </p>
+  );
+}
+
 function TextInput({
   id,
   name,
@@ -242,6 +293,7 @@ function TextInput({
   placeholder,
   autoComplete,
   wide,
+  error,
   onChange,
 }: {
   id: string;
@@ -252,8 +304,11 @@ function TextInput({
   placeholder: string;
   autoComplete: string;
   wide?: boolean;
+  error?: string;
   onChange: (value: string) => void;
 }) {
+  const errorId = `${id}-error`;
+
   return (
     <div className={wide ? "sm:col-span-2" : undefined}>
       <label
@@ -270,8 +325,17 @@ function TextInput({
         placeholder={placeholder}
         autoComplete={autoComplete}
         onChange={(event) => onChange(event.target.value)}
-        className={CONTROL}
+        aria-invalid={error ? true : undefined}
+        // Points a screen reader at the message rather than leaving it to infer
+        // one from proximity, which is what `aria-invalid` alone would do.
+        aria-describedby={error ? errorId : undefined}
+        className={`${CONTROL} ${error ? "border-destructive" : ""}`}
       />
+      {error ? (
+        <p id={errorId} role="alert" className="mt-1 text-[13px] text-destructive">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

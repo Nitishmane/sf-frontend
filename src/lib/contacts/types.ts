@@ -102,6 +102,12 @@ export type FormState = {
   values?: Partial<Record<keyof ContactInput, string>>;
   /** Echoed separately: addresses are a repeating list, not a flat string field. */
   addresses?: AddressInput[];
+  /**
+   * Address failures, keyed `"<row index>.<field>"` — plus `"list"` for one
+   * that belongs to the list itself. A bare field name could not say *which*
+   * row to highlight, which is the whole difficulty with a repeating group.
+   */
+  addressErrors?: Record<string, string>;
 };
 
 export const EMPTY_FORM_STATE: FormState = { status: "idle" };

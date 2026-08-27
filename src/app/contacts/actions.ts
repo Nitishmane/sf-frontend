@@ -8,12 +8,14 @@ import {
   createContact,
   deleteContact,
   replaceContact,
+  toAddressErrors,
   toFieldErrors,
 } from "@/lib/contacts/api";
 import {
   contactInputSchema,
   formDataToAddresses,
   formDataToValues,
+  zodAddressErrors,
   zodFieldErrors,
 } from "@/lib/contacts/schema";
 import type { Contact, FormState } from "@/lib/contacts/types";
@@ -57,6 +59,9 @@ export async function saveContactAction(
     return fail({
       message: "Please fix the highlighted fields.",
       fieldErrors: zodFieldErrors(parsed.error),
+      // Nested issues arrive as `addresses.0.postal_code`; collapsing them to
+      // the head would highlight nothing, so they travel separately.
+      addressErrors: zodAddressErrors(parsed.error),
     });
   }
 
@@ -83,6 +88,7 @@ export async function saveContactAction(
         return fail({
           message: "The API rejected these values.",
           fieldErrors: toFieldErrors(error),
+          addressErrors: toAddressErrors(error),
         });
       }
       return fail({

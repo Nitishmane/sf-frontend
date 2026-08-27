@@ -116,7 +116,7 @@ export default function ContactForm({
           </p>
         </div>
 
-        <AddressFields defaultValue={addresses} />
+        <AddressFields defaultValue={addresses} errors={state.addressErrors} />
       </fieldset>
 
       <div className="flex items-center gap-2 border-t border-hairline pt-4">

@@ -1,10 +1,13 @@
 import {
+  ADDRESS_LIST_ERROR,
   CONTACT_FIELDS,
   MAX_ADDRESSES,
+  addressErrorKey,
   addressInputSchema,
   contactInputSchema,
   formDataToAddresses,
   formDataToValues,
+  zodAddressErrors,
   zodFieldErrors,
 } from "@/lib/contacts/schema";
 import type { AddressInput } from "@/lib/contacts/types";
@@ -181,6 +184,71 @@ describe("formDataToAddresses", () => {
 
   it("returns an empty list when no rows were submitted", () => {
     expect(formDataToAddresses(new FormData())).toEqual([]);
+  });
+});
+
+describe("addressErrorKey", () => {
+  it("reads Zod's path", () => {
+    expect(addressErrorKey(["addresses", 0, "postal_code"])).toBe("0.postal_code");
+  });
+
+  it("reads FastAPI's path, which is the same one behind a `body` prefix", () => {
+    expect(addressErrorKey(["body", "addresses", 2, "city"])).toBe("2.city");
+  });
+
+  it("calls a failure of the list itself a list error", () => {
+    expect(addressErrorKey(["addresses"])).toBe(ADDRESS_LIST_ERROR);
+  });
+
+  it("ignores paths that have nothing to do with addresses", () => {
+    expect(addressErrorKey(["body", "email"])).toBeNull();
+    expect(addressErrorKey([])).toBeNull();
+  });
+});
+
+describe("zodAddressErrors", () => {
+  it("keeps the row and the field, which is what points at an input", () => {
+    const result = contactInputSchema.safeParse({
+      ...values(),
+      addresses: [
+        { type: "Home", street: "", city: "", state: "", postal_code: "", country: "", is_primary: false },
+        {
+          type: "Work",
+          street: "",
+          city: "",
+          state: "",
+          postal_code: "9".repeat(21),
+          country: "",
+          is_primary: false,
+        },
+      ],
+    });
+
+    expect(zodAddressErrors(result.error!)).toEqual({
+      "1.postal_code": "Postal code must be 20 characters or fewer",
+    });
+  });
+
+  it("files a too-long list against the list rather than a row", () => {
+    const result = contactInputSchema.safeParse({
+      ...values(),
+      addresses: Array.from({ length: MAX_ADDRESSES + 1 }, () => ({
+        type: "Home",
+        street: "",
+        city: "London",
+        state: "",
+        postal_code: "",
+        country: "",
+        is_primary: false,
+      })),
+    });
+
+    expect(Object.keys(zodAddressErrors(result.error!))).toEqual([ADDRESS_LIST_ERROR]);
+  });
+
+  it("returns nothing when only the flat fields failed", () => {
+    const result = contactInputSchema.safeParse(values({ email: "nope" }));
+    expect(zodAddressErrors(result.error!)).toEqual({});
   });
 });
 
