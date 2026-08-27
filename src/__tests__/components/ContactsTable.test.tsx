@@ -11,24 +11,49 @@ jest.mock("@/app/contacts/actions", () => ({
 }));
 
 describe("ContactsTable", () => {
-  it("renders a row per contact with links to view, mail, and edit", () => {
+  // Both views are in the DOM (CSS shows one per breakpoint), so each contact
+  // appears twice: once as a table row and once as a mobile card.
+  it("renders a table row and a mobile card per contact with links to view, mail, and edit", () => {
     render(<ContactsTable contacts={CONTACTS} query={DEFAULT_LIST_QUERY} />);
 
     expect(screen.getAllByRole("row")).toHaveLength(CONTACTS.length + 1);
+    expect(screen.getAllByRole("listitem")).toHaveLength(CONTACTS.length);
 
-    expect(screen.getByRole("link", { name: "Ada Lovelace" })).toHaveAttribute(
-      "href",
-      "/contacts/1",
-    );
+    const nameLinks = screen.getAllByRole("link", { name: "Ada Lovelace" });
+    expect(nameLinks).toHaveLength(2);
+    for (const link of nameLinks) {
+      expect(link).toHaveAttribute("href", "/contacts/1");
+    }
+
+    const mailLinks = screen.getAllByRole("link", { name: "ada@example.com" });
+    expect(mailLinks).toHaveLength(2);
+    for (const link of mailLinks) {
+      expect(link).toHaveAttribute("href", "mailto:ada@example.com");
+    }
+
+    const editLinks = screen.getAllByRole("link", { name: /edit ada lovelace/i });
+    expect(editLinks).toHaveLength(2);
+    for (const link of editLinks) {
+      expect(link).toHaveAttribute("href", "/contacts/1/edit");
+    }
+
     expect(
-      screen.getByRole("link", { name: "ada@example.com" }),
-    ).toHaveAttribute("href", "mailto:ada@example.com");
+      screen.getAllByRole("button", { name: /delete ada lovelace/i }),
+    ).toHaveLength(2);
+  });
+
+  it("offers sort pills on the card view, marking the active field", () => {
+    render(<ContactsTable contacts={CONTACTS} query={DEFAULT_LIST_QUERY} />);
+
     expect(
-      screen.getByRole("link", { name: /edit ada lovelace/i }),
-    ).toHaveAttribute("href", "/contacts/1/edit");
+      screen.getByRole("link", { name: /sort by name, currently ascending/i }),
+    ).toHaveAttribute("href", "/contacts?order=desc");
     expect(
-      screen.getByRole("button", { name: /delete ada lovelace/i }),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: /^sort by email$/i }),
+    ).toHaveAttribute("href", "/contacts?sort=email");
+    expect(
+      screen.getByRole("link", { name: /^sort by company$/i }),
+    ).toHaveAttribute("href", "/contacts?sort=company");
   });
 
   it("marks the sorted column and links to the opposite direction", () => {
