@@ -54,7 +54,7 @@ export default function DeleteContactButton({
           {withLabel ? "Delete" : null}
         </Button>
         {error ? (
-          <span role="alert" className="text-[13px] text-destructive">
+          <span role="alert" className="text-2sm text-destructive">
             {error}
           </span>
         ) : null}
@@ -64,7 +64,7 @@ export default function DeleteContactButton({
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className="text-[13px] text-muted-foreground">Delete?</span>
+      <span className="text-2sm text-muted-foreground">Delete?</span>
       <Button
         variant="danger"
         size="sm"

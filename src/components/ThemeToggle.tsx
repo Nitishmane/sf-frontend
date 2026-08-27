@@ -24,7 +24,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggle}
-      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+      className="rounded-md p-2 text-foreground/70 transition-colors hover:bg-secondary/60 hover:text-foreground"
       aria-label={label}
       title={label}
     >

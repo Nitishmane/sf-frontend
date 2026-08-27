@@ -86,7 +86,7 @@ export default function ContactForm({
             <h2 className="font-display text-sm font-semibold text-foreground">
               {group.title}
             </h2>
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-2sm text-muted-foreground">
               {group.description}
             </p>
           </div>
@@ -111,7 +111,7 @@ export default function ContactForm({
           <h2 className="font-display text-sm font-semibold text-foreground">
             Addresses
           </h2>
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-2sm text-muted-foreground">
             Optional. Add a home and a work address, or as many as you need.
           </p>
         </div>

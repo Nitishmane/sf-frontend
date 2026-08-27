@@ -3,6 +3,10 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import ApiErrorPanel from "@/components/contacts/ApiErrorPanel";
 import ApiStatusBadge from "@/components/contacts/ApiStatusBadge";
+import {
+  ContactsPendingProvider,
+  PendingArea,
+} from "@/components/contacts/ContactsPending";
 import ContactsTable from "@/components/contacts/ContactsTable";
 import ContactsToolbar from "@/components/contacts/ContactsToolbar";
 import EmptyState from "@/components/contacts/EmptyState";
@@ -72,25 +76,27 @@ export default async function ContactsPage({
           hint={`API base URL: ${apiBaseUrl || "(same origin)"}`}
         />
       ) : (
-        <>
+        <ContactsPendingProvider>
           <ContactsToolbar query={query} />
 
-          {result && result.items.length > 0 ? (
-            <>
-              <ContactsTable contacts={result.items} query={query} />
-              <Pagination
-                query={query}
-                total={result.total}
-                shown={result.items.length}
+          <PendingArea className="space-y-6">
+            {result && result.items.length > 0 ? (
+              <>
+                <ContactsTable contacts={result.items} query={query} />
+                <Pagination
+                  query={query}
+                  total={result.total}
+                  shown={result.items.length}
+                />
+              </>
+            ) : (
+              <EmptyState
+                searchTerm={query.search || undefined}
+                clearHref={contactsHref(query, { search: "", page: 1 })}
               />
-            </>
-          ) : (
-            <EmptyState
-              searchTerm={query.search || undefined}
-              clearHref={contactsHref(query, { search: "", page: 1 })}
-            />
-          )}
-        </>
+            )}
+          </PendingArea>
+        </ContactsPendingProvider>
       )}
     </div>
   );

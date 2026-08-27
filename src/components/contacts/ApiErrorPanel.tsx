@@ -27,7 +27,7 @@ export default function ApiErrorPanel({
         {message}
       </p>
       {hint ? (
-        <p className="mx-auto mt-3 max-w-md font-mono text-[12px] text-muted-foreground/80">
+        <p className="mx-auto mt-3 max-w-md font-mono text-xs text-muted-foreground/80">
           {hint}
         </p>
       ) : null}
